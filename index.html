@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gerenciador de Tarefas</title>
+</head>
+<body>
+    <h1>Lista de Tarefas</h1>
+
+    <form id="formAdicionarTarefa">
+        <input type="text" id="nomeTarefa" placeholder="Nome da tarefa" required>
+        <button type="submit">Adicionar Tarefa</button>
+    </form>
+
+    <button onclick="carregarTarefas()">Ver Todas</button>
+    <button onclick="filtrarTarefas(true)">Ver Completas</button>
+    <button onclick="filtrarTarefas(false)">Ver Incompletas</button>
+
+    <ul id="listaTarefas"></ul>
+
+    <script>
+        const apiURL = 'http://localhost:3000/tarefas';
+
+        function carregarTarefas() {
+            fetch(apiURL)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+                    return response.json();
+                })
+                .then(tarefas => {
+                    const listaTarefas = document.getElementById('listaTarefas');
+                    listaTarefas.innerHTML = '';
+                    tarefas.forEach(tarefa => {
+                        const li = document.createElement('li');
+                        li.textContent = `${tarefa.nome} - ${tarefa.status ? 'Completa' : 'Incompleta'}`;
+                        li.appendChild(criarBotoes(tarefa));
+                        listaTarefas.appendChild(li);
+                    });
+                })
+                .catch(error => console.error('Houve um problema com a requisição:', error));
+        }
+
+        function filtrarTarefas(status) {
+            fetch(`${apiURL}?status=${status}`)
+                .then(response => response.json())
+                .then(tarefas => {
+                    const listaTarefas = document.getElementById('listaTarefas');
+                    listaTarefas.innerHTML = '';
+                    tarefas.forEach(tarefa => {
+                        const li = document.createElement('li');
+                        li.textContent = `${tarefa.nome} - ${tarefa.status ? 'Completa' : 'Incompleta'}`;
+                        li.appendChild(criarBotoes(tarefa));
+                        listaTarefas.appendChild(li);
+                    });
+                })
+                .catch(error => console.error('Houve um problema com a requisição:', error));
+        }
+
+        function criarBotoes(tarefa) {
+            const container = document.createElement('span');
+
+            const botaoAtualizar = document.createElement('button');
+            botaoAtualizar.textContent = 'Atualizar Status';
+            botaoAtualizar.onclick = () => atualizarTarefa(tarefa.id, tarefa.nome, !tarefa.status);
+            container.appendChild(botaoAtualizar);
+
+            const botaoMudarNome = document.createElement('button');
+            botaoMudarNome.textContent = 'Mudar Nome';
+            botaoMudarNome.onclick = () => mudarNomeTarefa(tarefa.id);
+            container.appendChild(botaoMudarNome);
+
+            const botaoRemover = document.createElement('button');
+            botaoRemover.textContent = 'Remover';
+            botaoRemover.onclick = () => removerTarefa(tarefa.id);
+            container.appendChild(botaoRemover);
+
+            return container;
+        }
+
+        document.getElementById('formAdicionarTarefa').onsubmit = function(event) {
+            event.preventDefault();
+            const nome = document.getElementById('nomeTarefa').value;
+
+            fetch(apiURL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ nome, status: false })
+            })
+            .then(() => {
+                document.getElementById('nomeTarefa').value = '';
+                carregarTarefas();
+            })
+            .catch(error => console.error('Houve um problema com a requisição:', error));
+        }
+
+        function atualizarTarefa(id, nome, status) {
+            fetch(`${apiURL}/${id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ nome, status })
+            })
+            .then(() => carregarTarefas())
+            .catch(error => console.error('Houve um problema com a requisição:', error));
+        }
+
+        function mudarNomeTarefa(id) {
+            const novoNome = prompt("Digite o novo nome da tarefa:");
+            if (novoNome) {
+                fetch(`${apiURL}/${id}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ nome: novoNome })
+                })
+                .then(() => carregarTarefas())
+                .catch(error => console.error('Houve um problema com a requisição:', error));
+            }
+        }
+
+        function removerTarefa(id) {
+            fetch(`${apiURL}/${id}`, { method: 'DELETE' })
+            .then(() => carregarTarefas())
+            .catch(error => console.error('Houve um problema com a requisição:', error));
+        }
+
+        carregarTarefas();
+    </script>
+</body>
+</html>
